@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>EthosRadar - Trust Network Scanner</title>
+    <meta name="description" content="Scan wallet reputations, analyze trust networks, and track Ethos Protocol scores with real-time analytics." />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    
+    <!-- Preload critical WebP images for better performance -->
+    <link rel="preload" as="image" href="/unified-bg.webp" type="image/webp" />
+    <link rel="preload" as="image" href="/unified-bg.png" type="image/png" />
+    <link rel="preload" as="image" href="/logo.webp" type="image/webp" />
+    <link rel="preload" as="image" href="/logo.png" type="image/png" />
+    
+    <!-- Force light mode immediately - run before any other scripts -->
+    <script>
+      // Force light mode immediately to prevent flash
+      document.documentElement.classList.add('light');
+      localStorage.setItem('ethosradar-theme', 'light');
+    </script>
+    
+    <!-- WebP support detection -->
+    <script>
+      (function() {
+        // WebP support detection
+        function supportsWebP(callback) {
+          const webP = new Image();
+          webP.onload = webP.onerror = function () {
+            callback(webP.height === 2);
+          };
+          webP.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA';
+        }
+
+        // Add no-webp class if WebP is not supported
+        supportsWebP(function(supported) {
+          if (!supported) {
+            document.documentElement.classList.add('no-webp');
+          }
+        });
+
+        // Set theme-color meta tag for light mode
+        const meta = document.createElement('meta');
+        meta.name = 'theme-color';
+        meta.content = '#ffffff';
+        document.head.appendChild(meta);
+      })();
+    </script>
+    
+    <!-- Farcaster Mini App Embed with proper manifest -->
+    <meta name="fc:miniapp" content='{"version":"1","name":"EthosRadar","iconUrl":"https://ethosradar.com/logo1.png","imageUrl":"https://ethosradar.com/embed-preview.png","buttonTitle":"Scan Trust Score","homeUrl":"https://ethosradar.com"}' />
+    
+    <!-- For backward compatibility -->
+    <meta name="fc:frame" content='{"version":"1","imageUrl":"https://ethosradar.com/embed-preview.png","button":{"title":"Scan Your Trust Score","action":{"type":"launch_frame","name":"EthosRadar","url":"https://ethosradar.com/"}}}' />
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="EthosRadar - Trust Network Scanner" />
+    <meta property="og:description" content="Scan wallet reputations with Ethos Protocol" />
+    <meta property="og:image" content="https://ethosradar.com/logo.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ethosradar.com" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>
