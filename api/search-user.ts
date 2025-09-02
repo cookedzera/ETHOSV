@@ -4,6 +4,10 @@ import { z } from 'zod';
 // Import your existing Ethos API service
 import { ethosApi } from '../api-utils/ethos-api';
 
+// Specify runtime for Vercel
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
