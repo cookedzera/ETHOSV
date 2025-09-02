@@ -1,17 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { ethosApi } from '../api-utils/ethos-api';
 
-// Specify runtime for Vercel
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
 
-export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
     const { farcasterUsername } = z.object({
       farcasterUsername: z.string().min(1),
-    }).parse(body);
+    }).parse(req.body);
 
     // Step 1: Try to get FID from Farcaster username API
     const usernameResult = await ethosApi.getUserByFarcasterUsername(farcasterUsername);
@@ -47,33 +56,33 @@ export async function POST(request: NextRequest) {
             _originalQuery: farcasterUsername
           };
           
-          return NextResponse.json({ success: true, data: globalUser });
+          return res.status(200).json({ success: true, data: globalUser });
         }
       } catch (globalError) {
         // Global search fallback error
       }
       
-      return NextResponse.json({
+      return res.status(404).json({
         success: false,
         error: `User not found in Farcaster or global search: ${farcasterUsername}`
-      }, { status: 404 });
+      });
     }
 
     const userData = usernameResult.data;
     if (!userData || !userData.user) {
-      return NextResponse.json({
+      return res.status(404).json({
         success: false,
         error: `Invalid Farcaster user data for: ${farcasterUsername}`
-      }, { status: 404 });
+      });
     }
 
     // Step 2: Extract FID from response
     const farcasterKey = userData.user.userkeys?.find((key: string) => key.startsWith('service:farcaster:'));
     if (!farcasterKey) {
-      return NextResponse.json({
+      return res.status(404).json({
         success: false,
         error: `No FID found for Farcaster user: ${farcasterUsername}`
-      }, { status: 404 });
+      });
     }
 
     const fid = farcasterKey.split(':')[2];
@@ -82,10 +91,10 @@ export async function POST(request: NextRequest) {
     const fidResult = await ethosApi.getUserByFarcasterFid(fid);
     
     if (!fidResult.success) {
-      return NextResponse.json({
+      return res.status(404).json({
         success: false,
         error: `Could not get profile data for FID: ${fid}`
-      }, { status: 404 });
+      });
     }
 
     // Return pure Farcaster profile data
@@ -96,11 +105,11 @@ export async function POST(request: NextRequest) {
       _pureFarcaster: true
     };
 
-    return NextResponse.json({ success: true, data: enhancedUser });
+    return res.status(200).json({ success: true, data: enhancedUser });
   } catch (error) {
-    return NextResponse.json({ 
+    return res.status(500).json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Internal server error' 
-    }, { status: 500 });
+    });
   }
 }

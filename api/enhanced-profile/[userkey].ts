@@ -1,18 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ethosApi } from '../../api-utils/ethos-api';
 
-// Specify runtime for Vercel
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { userkey: string } }
-) {
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
   try {
-    const userkey = decodeURIComponent(params.userkey);
-    const { searchParams } = new URL(request.url);
-    const refresh = searchParams.get('refresh');
+    // Extract userkey from query path
+    const userkey = req.query.userkey as string;
+    if (!userkey) {
+      return res.status(400).json({ success: false, error: 'Missing userkey parameter' });
+    }
+    
+    const decodedUserkey = decodeURIComponent(userkey);
+    const refresh = req.query.refresh as string;
     
     // Simple in-memory cache (in production, use Redis or similar)
     const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -20,30 +30,30 @@ export async function GET(
     // Fast status detection using optimized V2 API calls
     let userResult;
     
-    if (userkey.startsWith('profileId:')) {
-      const profileId = parseInt(userkey.split(':')[1]);
+    if (decodedUserkey.startsWith('profileId:')) {
+      const profileId = parseInt(decodedUserkey.split(':')[1]);
       const profileResult = await ethosApi.getUsersByProfileId([profileId]);
       if (profileResult.success && profileResult.data && profileResult.data.length > 0) {
         userResult = profileResult.data[0];
       }
-    } else if (userkey.includes('service:x.com:')) {
+    } else if (decodedUserkey.includes('service:x.com:')) {
       // For Twitter users, get status directly from Twitter API
-      const parts = userkey.split(':');
+      const parts = decodedUserkey.split(':');
       const twitterId = parts[2];
       const twitterResult = await ethosApi.getUsersByTwitter([twitterId]);
       if (twitterResult.success && twitterResult.data && twitterResult.data.length > 0) {
         userResult = twitterResult.data[0];
       }
-    } else if (userkey.startsWith('address:')) {
+    } else if (decodedUserkey.startsWith('address:')) {
       // For address userkeys
-      const address = userkey.split(':')[1];
+      const address = decodedUserkey.split(':')[1];
       const addressResult = await ethosApi.getUsersByAddresses([address]);
       if (addressResult.success && addressResult.data && addressResult.data.length > 0) {
         userResult = addressResult.data[0];
       }
     } else {
       // For other userkey types, try direct lookup first
-      const directResult = await ethosApi.getUserByUserkey(userkey);
+      const directResult = await ethosApi.getUserByUserkey(decodedUserkey);
       if (directResult.success) {
         userResult = directResult.data;
       }
@@ -52,11 +62,11 @@ export async function GET(
     // Enhanced fallback: If no V2 API result, try V1 API and convert
     if (!userResult) {
       try {
-        const v1SearchResult = await ethosApi.searchUsersV1(userkey, 5);
+        const v1SearchResult = await ethosApi.searchUsersV1(decodedUserkey, 5);
         
         if (v1SearchResult.success && v1SearchResult.data?.ok && v1SearchResult.data.data.values.length > 0) {
           // Find exact userkey match or best match
-          let v1User = v1SearchResult.data.data.values.find(user => user.userkey === userkey);
+          let v1User = v1SearchResult.data.data.values.find(user => user.userkey === decodedUserkey);
           if (!v1User) {
             v1User = v1SearchResult.data.data.values[0];
           }
@@ -110,14 +120,14 @@ export async function GET(
       // Get weekly XP for users with actual activity
       let weeklyXpGain = 0;
       if (userResult.status === 'ACTIVE' && userResult.xpTotal > 0) {
-        weeklyXpGain = await ethosApi.getWeeklyXpGain(userkey);
+        weeklyXpGain = await ethosApi.getWeeklyXpGain(decodedUserkey);
       }
       
       // Get leaderboard position
       let leaderboardPosition = userResult.leaderboardPosition;
       if (!leaderboardPosition) {
         try {
-          leaderboardPosition = await ethosApi.getUserLeaderboardPosition(userkey);
+          leaderboardPosition = await ethosApi.getUserLeaderboardPosition(decodedUserkey);
         } catch (error) {
           // Could not fetch leaderboard position
         }
@@ -141,17 +151,17 @@ export async function GET(
         stats: userResult.stats
       };
       
-      return NextResponse.json({ success: true, data: profileData });
+      return res.status(200).json({ success: true, data: profileData });
     }
 
-    return NextResponse.json({ 
+    return res.status(404).json({ 
       success: false, 
       error: 'Enhanced profile not found' 
-    }, { status: 404 });
+    });
   } catch (error) {
-    return NextResponse.json({ 
+    return res.status(500).json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Internal server error' 
-    }, { status: 500 });
+    });
   }
 }

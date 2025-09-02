@@ -1,11 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Specify runtime for Vercel
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
-  return NextResponse.json({ 
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  return res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     service: 'EthosRadar',

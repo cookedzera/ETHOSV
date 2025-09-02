@@ -1,20 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 
 // Import your existing Ethos API service
 import { ethosApi } from '../api-utils/ethos-api';
 
-// Specify runtime for Vercel
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
 
-export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
     const { query, searchType } = z.object({
       query: z.string().min(1),
       searchType: z.enum(['twitter', 'userkey', 'auto']).optional().default('auto'),
-    }).parse(body);
+    }).parse(req.body);
 
     let result;
     
@@ -138,14 +147,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+      return res.status(404).json(result);
     }
 
-    return NextResponse.json(result);
+    return res.status(200).json(result);
   } catch (error) {
-    return NextResponse.json({ 
+    return res.status(500).json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Internal server error' 
-    }, { status: 500 });
+    });
   }
 }

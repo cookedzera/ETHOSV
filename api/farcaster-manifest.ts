@@ -1,10 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Specify runtime for Vercel
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const manifest = {
     accountAssociation: {
       header: "eyJmaWQiOjE5MDUyMiwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDk5RjZGZTYwZTJCYTM0MzI1MTI5ZEJEMmNEZGM0NTdEMjk3MzY4RjgifQ",
@@ -24,13 +20,11 @@ export async function GET() {
     }
   };
 
-  return NextResponse.json(manifest, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-  });
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  return res.status(200).json(manifest);
 }
